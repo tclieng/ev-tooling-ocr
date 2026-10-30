@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EV Tooling OCR — NX part file reader</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">EV</span>
+    <div>
+      <h1>EV Tooling OCR</h1>
+      <p class="tag">Read Siemens NX <code>.prt</code> part files — data sheet · press tooling concept · PPAP / FAI draft</p>
+    </div>
+  </div>
+  <div class="privacy" title="Files never leave your machine">
+    <span class="dot"></span> 100% client-side · nothing is uploaded
+  </div>
+</header>
+
+<main>
+
+  <!-- ============ upload panel ============ -->
+  <section id="uploadPanel" class="panel center">
+    <div id="dropzone" class="dropzone" tabindex="0">
+      <svg viewBox="0 0 48 48" width="52" height="52" aria-hidden="true">
+        <path d="M24 6v24M14 20l10-10 10 10" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M8 34v6h32v-6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" opacity=".45"/>
+      </svg>
+      <p class="dz-main">Drop a <strong>.prt</strong> file here, or click to browse</p>
+      <p class="dz-sub">The file is parsed locally in your browser. It never leaves this machine.</p>
+      <input type="file" id="fileInput" accept=".prt,.PRT" hidden>    </div>
+    <div class="demo-row">
+      <button id="demoBtn" class="btn ghost">Try the demo part</button>
+      <span class="hint">Loads a fictional sample part — data sheet and PPAP / FAI draft included.</span>
+    </div>
+    <div id="uploadError" class="error hidden"></div>
+  </section>
+
+  <!-- ============ result / data sheet ============ -->
+  <section id="result" class="hidden">
+
+    <div class="tabs no-print" role="tablist">
+      <button class="tab active" data-doc="data" role="tab">Part data sheet</button>
+      <button class="tab" data-doc="tooling" role="tab">Press tooling concept</button>
+      <button class="tab" data-doc="ppap" role="tab">PPAP / FAI package</button>
+      <span class="tab-note">three linked documents — all print cleanly</span>
+    </div>
+
+    <div id="sheet">
+
+      <div class="sheet-head">
+        <div>
+          <h2 id="rPn">—</h2>
+          <p id="rName" class="muted mono">—</p>
+        </div>
+        <div class="sheet-badges">
+          <span id="rRev" class="badge">REV —</span>
+          <span id="rSrc" class="badge dim">—</span>
+        </div>
+      </div>
+
+      <div id="rWarnings" class="warnings hidden"></div>
+
+      <div class="metrics" id="rMetrics"></div>
+
+      <div class="cols">
+        <div class="col">
+          <h3>Part attributes <span class="src-note">— verbatim from the file</span></h3>
+          <table class="attr" id="rAttrs"></table>
+        </div>
+
+        <div class="col">
+          <h3>Derived dimensions <span class="src-note">— computed from the attributes</span></h3>
+          <table class="attr" id="rDerived"></table>
+
+          <h3 class="mt">Embedded preview</h3>
+          <div id="rPreview" class="preview-box">
+            <p class="muted small">No preview found in this file.</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="notesWrap" class="hidden">
+        <h3>PMI notes <span class="src-note">— recovered from the 3D model</span></h3>
+        <ol class="notes" id="rNotes"></ol>
+      </div>
+
+      <div class="disclaimer">
+        <strong>Derived information only.</strong> Values above are read verbatim from the part
+        file's embedded attributes, or computed from them. A .prt contains no 2D drawing sheet —
+        feature-level dimensions and GD&amp;T live in 3D PMI and are not reproduced here.
+        Do not use for manufacturing.
+      </div>
+    </div>
+
+    <!-- ============ press tooling concept ============ -->
+    <div id="toolingSheet" class="hidden">
+      <div class="doc-head">
+        <div>
+          <p class="kicker">PRESS TOOLING CONCEPT — preliminary, auto-generated</p>
+          <h2>Press tooling &nbsp;·&nbsp; <span id="tPn">—</span></h2>
+          <p id="tName" class="muted mono small">—</p>
+        </div>
+        <div class="sheet-badges">
+          <span class="badge" id="tRoute">PROGRESSIVE · 6 STN</span>
+          <span class="badge dim" id="tPress">— t press</span>
+          <span class="badge dim" id="tRev">REV —</span>
+        </div>
+      </div>
+
+      <div id="toolingBody"></div>
+    </div>
+
+    <!-- ============ PPAP / FAI document ============ -->
+    <div id="ppapSheet" class="hidden">
+      <div class="doc-head">
+        <div>
+          <p class="kicker">PRODUCTION PART APPROVAL PACKAGE — auto-generated draft</p>
+          <h2>PPAP / FAI &nbsp;·&nbsp; <span id="pPn">—</span></h2>
+          <p id="pName" class="muted mono small">—</p>
+        </div>
+        <div class="sheet-badges">
+          <span class="badge" id="pLevel">LEVEL 3</span>
+          <span class="badge dim" id="pRev">REV —</span>
+          <span class="badge dim" id="pDocId">DOC —</span>
+        </div>
+      </div>
+
+      <div class="legend">
+        <span class="st ver">VER</span> read verbatim from the file
+        <span class="st der">DER</span> computed from file data
+        <span class="st asm">ASM</span> engineering assumption
+        <span class="st tbc">TBC</span> needs a part / drawing export
+        <span class="st na">N/A</span> not applicable
+      </div>
+
+      <div id="ppapBody"></div>
+    </div>
+
+    <div class="actions no-print">
+      <button id="printBtn" class="btn">Print / Save as PDF</button>
+      <button id="againBtn" class="btn ghost">Read another file</button>
+    </div>
+
+  </section>
+
+</main>
+
+<footer class="foot no-print">
+  EV Tooling OCR · works fully offline · built with WorkBuddy for the 1024 Build App Challenge
+</footer>
+
+<script src="parser.js"></script>
+<script src="tooling.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
